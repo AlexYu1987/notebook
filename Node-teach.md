@@ -1,35 +1,39 @@
 
 # Table of Contents
 
-1.  [Node 简介](#org1b217e9)
-    1.  [Node历史](#org099eccd)
-    2.  [nodejs和chrome浏览器的组件构成](#org24b9111)
-2.  [Node 特点](#org2f3fe7b)
-    1.  [异步IO](#org53d192f)
-    2.  [异步编程](#org4425b85)
-    3.  [单线程](#orgbf892d4)
-    4.  [跨平台](#org01a0b70)
-3.  [Node 使用场景](#orgf74120b)
-    1.  [IO密集型](#org83cc6db)
-    2.  [Nodejs是否不擅长CPU密集型业务](#orgd89d1ab)
-    3.  [分布式应用](#org7d81872)
-4.  [Nodejs模块机制](#org5a1addb)
-    1.  [优先从缓存加载](#orga87d012)
-    2.  [文件定位](#orgc77dc44)
-    3.  [文件模块编译](#orgae416bb)
-        1.  [javascript模块编译](#org9effa9c)
-        2.  [C/C++ 模块的编译](#org2f6ef5a)
-        3.  [JSON文件编译](#org3acd77e)
-    4.  [核心模块的编译](#orgdb1956b)
-        1.  [javascript核型模块编译](#org8311ce2)
+1.  [Node 简介](#org8d5bd18)
+    1.  [Node历史](#org1e9f98a)
+    2.  [nodejs和chrome浏览器的组件构成](#org2962a46)
+2.  [Node 特点](#org80e0380)
+    1.  [异步IO](#org7e01ed1)
+    2.  [异步编程](#org3bb5674)
+        1.  [将回调函数异步执行](#org3ae4da7)
+        2.  [事件发布/订阅模式](#orgb0f753e)
+        3.  [Promise模式](#org9b66949)
+        4.  [async/await](#orgba82640)
+    3.  [单线程](#orge6ce9f7)
+    4.  [跨平台](#org3b646cd)
+3.  [Node 使用场景](#orgfcdfd85)
+    1.  [IO密集型](#orgf39ba70)
+    2.  [Nodejs是否不擅长CPU密集型业务](#org127f002)
+    3.  [分布式应用](#org6e12456)
+4.  [Nodejs模块机制](#org41559c4)
+    1.  [优先从缓存加载](#org2425d23)
+    2.  [文件定位](#org4e12fdd)
+    3.  [文件模块编译](#org44de2c1)
+        1.  [javascript模块编译](#org23330c5)
+        2.  [C/C++ 模块的编译](#org4d58e30)
+        3.  [JSON文件编译](#org9b05c34)
+    4.  [核心模块的编译](#orgbfb9de6)
+        1.  [javascript核型模块编译](#org4b2f2c1)
 
 
-<a id="org1b217e9"></a>
+<a id="org8d5bd18"></a>
 
 # Node 简介
 
 
-<a id="org099eccd"></a>
+<a id="org1e9f98a"></a>
 
 ## Node历史
 
@@ -41,7 +45,7 @@ js在后端一直没有什么市场，为其导入非阻塞IO没有额外阻力�
    起初项目叫web.js，就是一个web服务器，但是项目的发展超过了预期，变成了网络应用的基础框架。 
 
 
-<a id="org24b9111"></a>
+<a id="org2962a46"></a>
 
 ## nodejs和chrome浏览器的组件构成
 
@@ -49,12 +53,12 @@ Chrome和nodejs组件的构成如下图所示，浏览器除了V8作为Javascrip
 [Chrome和nodejs组件的架构](https://www.processon.com/view/link/5bc6a1fbe4b0d4d65c31124a)
 
 
-<a id="org2f3fe7b"></a>
+<a id="org80e0380"></a>
 
 # Node 特点
 
 
-<a id="org53d192f"></a>
+<a id="org7e01ed1"></a>
 
 ## 异步IO
 
@@ -70,12 +74,130 @@ Chrome和nodejs组件的构成如下图所示，浏览器除了V8作为Javascrip
 [异步I/O调用时序图](https://www.processon.com/view/link/5bc7e510e4b0d4d65c32ff18)
 
 
-<a id="org4425b85"></a>
+<a id="org3bb5674"></a>
 
 ## 异步编程
 
 
-<a id="orgbf892d4"></a>
+<a id="org3ae4da7"></a>
+
+### 将回调函数异步执行
+
+    function func1 (callback) {
+        console.log('func1 executed.');
+        process.nextTick(callback);
+    }
+    
+    func1(() => {
+        console.log('callback executed.');
+    });
+
+
+<a id="orgb0f753e"></a>
+
+### 事件发布/订阅模式
+
+Nodejs的核心模块-events，是发布订阅的简单实现。
+
+    var events = require('events');
+    var util = require('util');
+    
+    function Stream () {
+        events.EventEmitter.call(this);
+    }
+    util.inherits(Stream, events.EventEmitter);
+    
+    var st1 = new Stream();
+    st1.on('event1', function() {
+        console.log('Hello, event1');
+    });
+    
+    st1.emit('event1');
+
+
+<a id="org9b66949"></a>
+
+### Promise模式
+
+   Promise构造函数接受一个函数作为参数，该函数的两个参数分别是resolve和reject。resolve函数的作用是，
+将Promise对象的状态从“未完成”变为“成功”（即从 pending 变为 resolved），在异步操作成功时调用，并将异步操作的结果，
+作为参数传递出去；reject函数的作用是，将Promise对象的状态从“未完成”变为“失败”（即从 pending 变为 rejected），
+在异步操作失败时调用，并将异步操作报出的错误，作为参数传递出去。
+    下面代码创造了一个promise实例。
+
+    const promise = new Promise(function(resolve, reject) {
+      // ... some code
+    
+      if (/* 异步操作成功 */){
+        resolve(value);
+      } else {
+        reject(error);
+      }
+
+Promise实例生成以后，可以用then方法分别指定resolved状态和rejected状态的回调函数。
+
+    promise.then(function(value) {
+      // success
+    }, function(error) {
+      // failure
+    });
+
+以下哪个先输出？
+
+    var promise = new Promise(function(resolve, reject) {
+      console.log('Promise');
+      resolve();
+    });
+    
+    promise.then(function() {
+      console.log('resolved.');
+    });
+    
+    console.log('Hi!');
+
+一个异步加载图片的例子
+
+    function loadImageAsync(url) {
+      return new Promise(function(resolve, reject) {
+        const image = new Image();
+    
+        image.onload = function() {
+          resolve(image);
+        };
+    
+        image.onerror = function() {
+          reject(new Error('Could not load image at ' + url));
+        };
+    
+        image.src = url;
+      });
+    }
+
+
+<a id="orgba82640"></a>
+
+### async/await
+
+    async函数返回一个 Promise 对象，可以使用then方法添加回调函数。当函数执行的时候，一旦遇到await就会先返回，
+等到异步操作完成，再接着执行函数体内后面的语句。
+
+    async function add (a, b) {
+        console.log('a + b');
+        return a + b;
+    }
+    async function getResult(){
+        var result = await add(1, 1);
+        console.log('result is ' +  result);
+    }
+    
+    getResult().then((result)=>{
+        console.log('success!');
+    }, (err)=>{
+        console.log(err.message);
+    });
+
+
+<a id="orge6ce9f7"></a>
 
 ## 单线程
 
@@ -90,7 +212,7 @@ Chrome和nodejs组件的构成如下图所示，浏览器除了V8作为Javascrip
 进程之间的事件消息来传递结果。
 
 
-<a id="org01a0b70"></a>
+<a id="org3b646cd"></a>
 
 ## 跨平台
 
@@ -98,12 +220,12 @@ Chrome和nodejs组件的构成如下图所示，浏览器除了V8作为Javascrip
 在多平台上的实现。
 
 
-<a id="orgf74120b"></a>
+<a id="orgfcdfd85"></a>
 
 # Node 使用场景
 
 
-<a id="org83cc6db"></a>
+<a id="orgf39ba70"></a>
 
 ## IO密集型
 
@@ -111,7 +233,7 @@ Nodejs面向网络且擅长并行IO，能够有效地组织起更多的硬件资
 IO密集的优势主要在于Node利用事件循环的处理能力，而不是启动每一个线程为每一个请求服务，占用资源极少。
 
 
-<a id="orgd89d1ab"></a>
+<a id="org127f002"></a>
 
 ## Nodejs是否不擅长CPU密集型业务
 
@@ -226,7 +348,7 @@ V8的执行效率是非常高的，如下列表分别是使用各种语言进行
    Nodejs可以通过编写C++扩展的方式更高效地利用CPU，将一些V8不能做到性能极致的地方通过C++来实现。
 
 
-<a id="org7d81872"></a>
+<a id="org6e12456"></a>
 
 ## 分布式应用
 
@@ -236,7 +358,7 @@ V8的执行效率是非常高的，如下列表分别是使用各种语言进行
    这个案例其实是高效利用并行IO充分压榨硬件资源的过程。
 
 
-<a id="org5a1addb"></a>
+<a id="org41559c4"></a>
 
 # Nodejs模块机制
 
@@ -252,7 +374,7 @@ V8的执行效率是非常高的，如下列表分别是使用各种语言进行
 -   文件模块则是在运行时动态加载，需要问政的路径分析、文件定位、编译执行过程，速度比核心模块慢。
 
 
-<a id="orga87d012"></a>
+<a id="org2425d23"></a>
 
 ## 优先从缓存加载
 
@@ -261,7 +383,7 @@ V8的执行效率是非常高的，如下列表分别是使用各种语言进行
 检查。
 
 
-<a id="orgc77dc44"></a>
+<a id="org4e12fdd"></a>
 
 ## 文件定位
 
@@ -294,7 +416,7 @@ Nodejs按照.js .json .node次序依次补足扩展名。
 照步骤2的扩展名顺序进行分析。
 
 
-<a id="orgae416bb"></a>
+<a id="org44de2c1"></a>
 
 ## 文件模块编译
 
@@ -314,7 +436,7 @@ Nodejs按照.js .json .node次序依次补足扩展名。
     }
 
 
-<a id="org9effa9c"></a>
+<a id="org23330c5"></a>
 
 ### javascript模块编译
 
@@ -328,7 +450,7 @@ Nodejs对JavaScript文件进行了头尾封装
 模块里的变量在funciton scope里的，不会污染模块外的代码。注意exports和module.exports的区别。
 
 
-<a id="org2f6ef5a"></a>
+<a id="org4d58e30"></a>
 
 ### C/C++ 模块的编译
 
@@ -336,7 +458,7 @@ Nodejs对JavaScript文件进行了头尾封装
 C/C++模块的优势是效率高，缺点是开发门槛高。
 
 
-<a id="org3acd77e"></a>
+<a id="org9b05c34"></a>
 
 ### JSON文件编译
 
@@ -357,12 +479,12 @@ Module.<sub>extensions会赋值给require.extensions可以看以下require.exten
     console.log(require.extensions);
 
 
-<a id="orgdb1956b"></a>
+<a id="orgbfb9de6"></a>
 
 ## 核心模块的编译
 
 
-<a id="org8311ce2"></a>
+<a id="org4b2f2c1"></a>
 
 ### javascript核型模块编译
 
